@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Manage Licenses – IT Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Manage Licenses</h1>
+  <a href="/users" class="btn btn-ghost">← Back to Users</a>
+</div>
+
+{% if message %}
+  <div class="alert alert-{{ message_type }}">{{ message }}</div>
+{% endif %}
+
+<div class="card" style="max-width:520px;">
+  <form method="post" action="/users/licenses">
+    <div class="form-group">
+      <label for="email">User Email</label>
+      <input type="email" id="email" name="email" value="{{ prefill_email }}"
+             placeholder="user@company.com" required />
+    </div>
+    {% if user %}
+    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:0.8rem 1rem;margin-bottom:1rem;">
+      <div style="font-size:0.78rem;color:#64748b;margin-bottom:0.4rem;">Current licenses for {{ user.name }}</div>
+      {% for lic in user.licenses %}
+        <span class="tag">{{ lic }}</span>
+      {% else %}
+        <span style="color:#475569;font-size:0.82rem;">No licenses assigned</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="form-group">
+      <label for="license_name">License</label>
+      <select id="license_name" name="license_name" required>
+        <option value="">Select a license…</option>
+        {% for lic in all_licenses %}
+          <option value="{{ lic }}">{{ lic }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Action</label>
+      <div style="display:flex;gap:0.75rem;margin-top:0.4rem;">
+        <label style="display:flex;align-items:center;gap:0.4rem;text-transform:none;letter-spacing:0;font-size:0.875rem;color:#cbd5e1;cursor:pointer;">
+          <input type="radio" name="action" value="assign" checked style="width:auto;" /> Assign
+        </label>
+        <label style="display:flex;align-items:center;gap:0.4rem;text-transform:none;letter-spacing:0;font-size:0.875rem;color:#cbd5e1;cursor:pointer;">
+          <input type="radio" name="action" value="revoke" style="width:auto;" /> Revoke
+        </label>
+      </div>
+    </div>
+    <div style="display:flex;gap:0.75rem;margin-top:1.5rem;">
+      <button type="submit" class="btn btn-success">🪪 Update License</button>
+      <a href="/users" class="btn btn-ghost">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+fastapi>=0.100
+uvicorn[standard]>=0.20
+jinja2
+python-multipart
+
+browser-use>=0.1
+langchain>=0.1
+langchain-openai>=0.1
+openai>=1.0
+httpx>=0.28
+
+slack-bolt>=1.20
+
+python-dotenv
+pydantic
+
+playwright>=1.40

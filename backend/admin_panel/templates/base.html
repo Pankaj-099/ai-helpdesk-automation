@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}IT Admin Panel{% endblock %}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+    /* Nav */
+    nav { background: #1e293b; border-bottom: 1px solid #334155; padding: 0 2rem; display: flex; align-items: center; gap: 2rem; height: 56px; }
+    nav .logo { font-weight: 700; font-size: 1.1rem; color: #60a5fa; letter-spacing: -0.5px; margin-right: auto; }
+    nav a { color: #94a3b8; text-decoration: none; font-size: 0.875rem; padding: 0.4rem 0.8rem; border-radius: 6px; transition: all 0.15s; }
+    nav a:hover, nav a.active { color: #f1f5f9; background: #334155; }
+
+    /* Layout */
+    main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+    h1 { font-size: 1.5rem; font-weight: 700; color: #f1f5f9; margin-bottom: 1.5rem; }
+    h2 { font-size: 1.1rem; font-weight: 600; color: #cbd5e1; margin-bottom: 1rem; }
+
+    /* Cards */
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+
+    /* Stats grid */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .stat { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 1.2rem 1.5rem; }
+    .stat .num { font-size: 2rem; font-weight: 700; color: #60a5fa; }
+    .stat .label { font-size: 0.8rem; color: #64748b; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* Forms */
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    input, select { width: 100%; padding: 0.6rem 0.9rem; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #f1f5f9; font-size: 0.9rem; outline: none; transition: border 0.15s; }
+    input:focus, select:focus { border-color: #60a5fa; }
+    input::placeholder { color: #475569; }
+
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.2rem; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 500; cursor: pointer; text-decoration: none; transition: all 0.15s; }
+    .btn-primary { background: #3b82f6; color: white; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-success { background: #10b981; color: white; }
+    .btn-success:hover { background: #059669; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-ghost { background: transparent; color: #94a3b8; border: 1px solid #334155; }
+    .btn-ghost:hover { background: #334155; color: #f1f5f9; }
+
+    /* Alerts */
+    .alert { padding: 0.8rem 1rem; border-radius: 8px; font-size: 0.875rem; margin-bottom: 1rem; }
+    .alert-success { background: #064e3b; border: 1px solid #10b981; color: #6ee7b7; }
+    .alert-error { background: #450a0a; border: 1px solid #ef4444; color: #fca5a5; }
+    .alert-warning { background: #451a03; border: 1px solid #f59e0b; color: #fcd34d; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    th { text-align: left; padding: 0.75rem 1rem; color: #64748b; font-weight: 500; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #334155; }
+    td { padding: 0.85rem 1rem; border-bottom: 1px solid #1e293b; color: #cbd5e1; }
+    tr:hover td { background: #1e293b; }
+
+    /* Badge */
+    .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 100px; font-size: 0.72rem; font-weight: 600; }
+    .badge-active { background: #064e3b; color: #6ee7b7; }
+    .badge-inactive { background: #1c1917; color: #78716c; }
+
+    /* Search bar */
+    .search-bar { display: flex; gap: 0.75rem; margin-bottom: 1.25rem; }
+    .search-bar input { flex: 1; }
+
+    .tag { display: inline-block; background: #1e3a5f; color: #93c5fd; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.72rem; margin: 2px; }
+
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+    .page-header h1 { margin: 0; }
+  </style>
+</head>
+<body>
+  <nav>
+    <span class="logo">⚙️ IT Admin</span>
+    <a href="/" {% if request.url.path == '/' %}class="active"{% endif %}>Dashboard</a>
+    <a href="/users" {% if request.url.path == '/users' %}class="active"{% endif %}>Users</a>
+    <a href="/users/create" {% if request.url.path == '/users/create' %}class="active"{% endif %}>Create User</a>
+    <a href="/users/reset-password" {% if '/reset-password' in request.url.path %}class="active"{% endif %}>Reset Password</a>
+    <a href="/users/licenses" {% if '/licenses' in request.url.path %}class="active"{% endif %}>Licenses</a>
+    <a href="/users/toggle-status" {% if '/toggle-status' in request.url.path %}class="active"{% endif %}>Toggle Status</a>
+    <a href="/audit-log" {% if '/audit-log' in request.url.path %}class="active"{% endif %}>Audit Log</a>
+  </nav>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – IT Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Dashboard</h1>
+  <a href="/users/create" class="btn btn-primary">+ New User</a>
+</div>
+
+<div class="stats">
+  <div class="stat">
+    <div class="num">{{ stats.total_users }}</div>
+    <div class="label">Total Users</div>
+  </div>
+  <div class="stat">
+    <div class="num" style="color:#10b981">{{ stats.active_users }}</div>
+    <div class="label">Active</div>
+  </div>
+  <div class="stat">
+    <div class="num" style="color:#ef4444">{{ stats.inactive_users }}</div>
+    <div class="label">Inactive</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Quick Actions</h2>
+  <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+    <a href="/users" class="btn btn-ghost">👥 View All Users</a>
+    <a href="/users/create" class="btn btn-ghost">➕ Create User</a>
+    <a href="/users/reset-password" class="btn btn-ghost">🔑 Reset Password</a>
+    <a href="/users/licenses" class="btn btn-ghost">🪪 Manage Licenses</a>
+    <a href="/users/toggle-status" class="btn btn-ghost">🔄 Toggle Status</a>
+    <a href="/audit-log" class="btn btn-ghost">📋 Audit Log</a>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Recent Activity</h2>
+  {% if stats.recent_actions %}
+    <table>
+      <thead><tr><th>Time</th><th>Action</th><th>Details</th><th>By</th></tr></thead>
+      <tbody>
+        {% for log in stats.recent_actions %}
+        <tr>
+          <td style="color:#64748b;font-size:0.78rem;">{{ log.timestamp }}</td>
+          <td><span class="badge" style="background:#1e3a5f;color:#93c5fd;">{{ log.action }}</span></td>
+          <td>{{ log.details }}</td>
+          <td style="color:#64748b;">{{ log.performed_by }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p style="color:#475569;font-size:0.875rem;">No activity yet. Actions by the AI agent will appear here.</p>
+  {% endif %}
+</div>
+{% endblock %}

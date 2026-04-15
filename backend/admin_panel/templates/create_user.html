@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Create User – IT Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Create New User</h1>
+  <a href="/users" class="btn btn-ghost">← Back to Users</a>
+</div>
+
+{% if message %}
+  <div class="alert alert-{{ message_type }}">{{ message }}</div>
+{% endif %}
+
+<div class="card" style="max-width:520px;">
+  <form method="post" action="/users/create">
+    <div class="form-group">
+      <label for="name">Full Name</label>
+      <input type="text" id="name" name="name" placeholder="e.g. Alice Brown" required />
+    </div>
+    <div class="form-group">
+      <label for="email">Email Address</label>
+      <input type="email" id="email" name="email" placeholder="e.g. alice@company.com" required />
+    </div>
+    <div class="form-group">
+      <label for="role">Job Role</label>
+      <input type="text" id="role" name="role" placeholder="e.g. Software Engineer" required />
+    </div>
+    <div class="form-group">
+      <label for="department">Department</label>
+      <select id="department" name="department" required>
+        <option value="">Select department…</option>
+        <option value="Engineering">Engineering</option>
+        <option value="Product">Product</option>
+        <option value="Design">Design</option>
+        <option value="Marketing">Marketing</option>
+        <option value="Sales">Sales</option>
+        <option value="HR">HR</option>
+        <option value="Finance">Finance</option>
+        <option value="Operations">Operations</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="password">Initial Password</label>
+      <input type="text" id="password" name="password" placeholder="Minimum 6 characters" required minlength="6" />
+    </div>
+    <div style="display:flex;gap:0.75rem;margin-top:1.5rem;">
+      <button type="submit" class="btn btn-success">✅ Create User</button>
+      <a href="/users" class="btn btn-ghost">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Toggle User Status – IT Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Toggle User Status</h1>
+  <a href="/users" class="btn btn-ghost">← Back to Users</a>
+</div>
+
+{% if message %}
+  <div class="alert alert-{{ message_type }}">{{ message }}</div>
+{% endif %}
+
+<div class="card" style="max-width:520px;">
+  <form method="post" action="/users/toggle-status">
+    <div class="form-group">
+      <label for="email">User Email</label>
+      <input type="email" id="email" name="email" value="{{ prefill_email }}"
+             placeholder="user@company.com" required />
+    </div>
+    {% if user %}
+    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:0.8rem 1rem;margin-bottom:1rem;">
+      <div style="font-size:0.78rem;color:#64748b;margin-bottom:0.3rem;">User info</div>
+      <div style="font-weight:600;color:#f1f5f9;">{{ user.name }}</div>
+      <div style="font-size:0.82rem;color:#64748b;margin-bottom:0.5rem;">{{ user.role }} · {{ user.department }}</div>
+      Current status:
+      <span class="badge {% if user.status == 'active' %}badge-active{% else %}badge-inactive{% endif %}">
+        {{ user.status }}
+      </span>
+    </div>
+    {% endif %}
+    <div class="form-group">
+      <label>New Status</label>
+      <div style="display:flex;gap:0.75rem;margin-top:0.4rem;">
+        <label style="display:flex;align-items:center;gap:0.4rem;text-transform:none;letter-spacing:0;font-size:0.875rem;color:#cbd5e1;cursor:pointer;">
+          <input type="radio" name="action" value="activate" checked style="width:auto;" /> Activate
+        </label>
+        <label style="display:flex;align-items:center;gap:0.4rem;text-transform:none;letter-spacing:0;font-size:0.875rem;color:#cbd5e1;cursor:pointer;">
+          <input type="radio" name="action" value="deactivate" style="width:auto;" /> Deactivate
+        </label>
+      </div>
+    </div>
+    <div style="display:flex;gap:0.75rem;margin-top:1.5rem;">
+      <button type="submit" class="btn btn-primary">🔄 Update Status</button>
+      <a href="/users" class="btn btn-ghost">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
