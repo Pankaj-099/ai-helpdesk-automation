@@ -15,13 +15,23 @@ templates = Jinja2Templates(
 
 @router.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    stats = {
-        "total_users": len(USERS_DB),
-        "active_users": sum(1 for u in USERS_DB.values() if u["status"] == "active"),
-        "inactive_users": sum(1 for u in USERS_DB.values() if u["status"] == "inactive"),
-        "recent_actions": AUDIT_LOG[-5:][::-1],
-    }
-    return templates.TemplateResponse("dashboard.html", {"request": request, "stats": stats})
+    try:
+        users = USERS_DB if USERS_DB else {}
+
+        stats = {
+            "total_users": len(users),
+            "active_users": sum(1 for u in users.values() if u.get("status") == "active"),
+            "inactive_users": sum(1 for u in users.values() if u.get("status") == "inactive"),
+            "recent_actions": AUDIT_LOG[-5:][::-1] if AUDIT_LOG else [],
+        }
+
+        return templates.TemplateResponse(
+            "dashboard.html",
+            {"request": request, "stats": stats}
+        )
+
+    except Exception as e:
+        return HTMLResponse(f"Dashboard Error: {str(e)}")
 
 
 # ─── Users List ──────────────────────────────────────────────────────────────
