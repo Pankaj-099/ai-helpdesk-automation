@@ -1,7 +1,8 @@
 # Mock in-memory database for IT Admin Panel
 from datetime import datetime
 
-# Seed data - simulates a real company directory
+# ─── USERS DATABASE ──────────────────────────────────────
+
 USERS_DB = {
     "john@company.com": {
         "id": 1,
@@ -38,6 +39,9 @@ USERS_DB = {
     },
 }
 
+
+# ─── LICENSES ───────────────────────────────────────────
+
 AVAILABLE_LICENSES = [
     "Microsoft 365",
     "GitHub",
@@ -49,15 +53,44 @@ AVAILABLE_LICENSES = [
     "AWS Console",
 ]
 
+
+# ─── AUDIT LOG ──────────────────────────────────────────
+
 AUDIT_LOG = []
 
+# ✅ Clean any corrupted data at startup
+AUDIT_LOG = [log for log in AUDIT_LOG if isinstance(log, dict)]
+
+
+# ─── SAFE LOG FUNCTION (FINAL FIX) ──────────────────────
 
 def log_action(action: str, details: str, performed_by: str = "AI Agent"):
-    AUDIT_LOG.append(
-        {
+    """
+    Safe logging function that prevents tuple/dict corruption.
+    """
+
+    try:
+        # ✅ Force safe types
+        action = str(action)
+        details = str(details)
+        performed_by = str(performed_by)
+
+        entry = {
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "action": action,
             "details": details,
             "performed_by": performed_by,
         }
-    )
+
+        # ✅ Only append valid dict
+        if isinstance(entry, dict):
+            AUDIT_LOG.append(entry)
+
+    except Exception:
+        # fallback safe log
+        AUDIT_LOG.append({
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "action": "ERROR",
+            "details": "Invalid log entry prevented",
+            "performed_by": "SYSTEM",
+        })

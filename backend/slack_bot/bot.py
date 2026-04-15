@@ -1,18 +1,12 @@
 """
 Slack Bot for IT Agent
 Listens for messages in a Slack channel and triggers the AI agent.
-
-Setup:
-1. Create a Slack App at https://api.slack.com/apps
-2. Enable Socket Mode
-3. Subscribe to: app_mention, message.channels events
-4. Add Bot Token Scopes: app_mentions:read, chat:write, channels:history
-5. Set SLACK_BOT_TOKEN and SLACK_APP_TOKEN in .env
 """
 
 import asyncio
 import os
 import logging
+
 from slack_bolt.async_app import AsyncApp
 from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
 
@@ -20,66 +14,106 @@ from agent.agent import run_agent, build_conditional_task
 
 logger = logging.getLogger(__name__)
 
-app = AsyncApp(token=os.getenv("SLACK_BOT_TOKEN", ""))
+# ─── SAFE APP INIT ───────────────────────────────────────
 
+SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
+SLACK_APP_TOKEN = os.getenv("SLACK_APP_TOKEN")
+
+app = AsyncApp(token=SLACK_BOT_TOKEN)
+
+
+# ─── SAFE TASK PARSER ────────────────────────────────────
+
+def extract_task(text: str, bot_user_id: str = None) -> str:
+    """Safely extract task text."""
+    if not isinstance(text, str):
+        return ""
+
+    task = text.strip()
+
+    if bot_user_id:
+        task = task.replace(f"<@{bot_user_id}>", "").strip()
+
+    return task
+
+
+# ─── MENTION HANDLER ─────────────────────────────────────
 
 @app.event("app_mention")
 async def handle_mention(event, say, client):
-    """Handle @mention in any channel."""
-    # Strip the bot mention from the text
-    text = event.get("text", "")
-    bot_user_id = (await client.auth_test())["user_id"]
-    task = text.replace(f"<@{bot_user_id}>", "").strip()
+    try:
+        text = event.get("text", "")
 
-    if not task:
-        await say("Hi! Mention me with an IT task, e.g. `@ITAgent reset password for john@company.com`")
-        return
+        auth = await client.auth_test()
+        bot_user_id = auth.get("user_id")
 
-    await say(f"⏳ On it! Running: *{task}*")
+        task = extract_task(text, bot_user_id)
 
-    task = build_conditional_task(task)
-    result = await run_agent(task, headless=True)
+        if not task:
+            await say("Hi! Mention me with a task like:\n`reset password for john@company.com`")
+            return
 
-    if result["success"]:
-        await say(f"✅ *Done* ({result['steps']} steps)\n\n{result['result']}")
-    else:
-        await say(f"❌ *Failed*\n\n{result['result']}")
+        await say(f"⏳ Running: *{task}*")
 
+        task = build_conditional_task(task)
+
+        result = await run_agent(task, headless=True)
+
+        if result.get("success"):
+            await say(f"✅ Done ({result.get('steps', 0)} steps)\n\n{result.get('result')}")
+        else:
+            await say(f"❌ Failed\n\n{result.get('result')}")
+
+    except Exception as e:
+        logger.error(f"Slack mention error: {e}")
+        await say("❌ Something went wrong while processing your request.")
+
+
+# ─── DM HANDLER ─────────────────────────────────────────
 
 @app.event("message")
 async def handle_dm(message, say):
-    """Handle direct messages to the bot."""
-    # Ignore bot messages and subtypes
-    if message.get("subtype") or message.get("bot_id"):
-        return
+    try:
+        # Ignore bots
+        if message.get("subtype") or message.get("bot_id"):
+            return
 
-    # Only handle DMs (channel type 'im')
-    channel_type = message.get("channel_type")
-    if channel_type != "im":
-        return
+        # Only DMs
+        if message.get("channel_type") != "im":
+            return
 
-    task = message.get("text", "").strip()
-    if not task:
-        return
+        task = extract_task(message.get("text", ""))
 
-    await say(f"⏳ Running: *{task}*")
+        if not task:
+            return
 
-    task = build_conditional_task(task)
-    result = await run_agent(task, headless=True)
+        await say(f"⏳ Running: *{task}*")
 
-    if result["success"]:
-        await say(f"✅ *Done* ({result['steps']} steps)\n\n{result['result']}")
-    else:
-        await say(f"❌ *Failed*\n\n{result['result']}")
+        task = build_conditional_task(task)
 
+        result = await run_agent(task, headless=True)
+
+        if result.get("success"):
+            await say(f"✅ Done ({result.get('steps', 0)} steps)\n\n{result.get('result')}")
+        else:
+            await say(f"❌ Failed\n\n{result.get('result')}")
+
+    except Exception as e:
+        logger.error(f"Slack DM error: {e}")
+        await say("❌ Error while processing your request.")
+
+
+# ─── START BOT ──────────────────────────────────────────
 
 async def start_slack_bot():
-    """Start the Slack bot in Socket Mode."""
-    app_token = os.getenv("SLACK_APP_TOKEN", "")
-    if not app_token or not os.getenv("SLACK_BOT_TOKEN"):
-        logger.warning("Slack tokens not set — bot will not start.")
+    if not SLACK_APP_TOKEN or not SLACK_BOT_TOKEN:
+        logger.warning("Slack tokens missing — bot not started")
         return
 
-    handler = AsyncSocketModeHandler(app, app_token)
-    logger.info("🤖 Slack bot started")
-    await handler.start_async()
+    try:
+        handler = AsyncSocketModeHandler(app, SLACK_APP_TOKEN)
+        logger.info("🤖 Slack bot started")
+        await handler.start_async()
+
+    except Exception as e:
+        logger.error(f"Slack startup error: {e}")
