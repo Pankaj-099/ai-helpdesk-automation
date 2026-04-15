@@ -28,15 +28,23 @@ async def dashboard(request: Request):
 
 @router.get("/users", response_class=HTMLResponse)
 async def list_users(request: Request, search: str = ""):
-    users = list(USERS_DB.values())
-    if search:
-        users = [
-            u for u in users
-            if search.lower() in u["email"].lower() or search.lower() in u["name"].lower()
-        ]
-    return templates.TemplateResponse(
-        "users.html", {"request": request, "users": users, "search": search}
-    )
+    try:
+        users = list(USERS_DB.values()) if USERS_DB else []
+
+        if search:
+            users = [
+                u for u in users
+                if search.lower() in u.get("email", "").lower()
+                or search.lower() in u.get("name", "").lower()
+            ]
+
+        return templates.TemplateResponse(
+            "users.html",
+            {"request": request, "users": users, "search": search}
+        )
+
+    except Exception as e:
+        return HTMLResponse(f"Error: {str(e)}")
 
 
 # ─── Create User ─────────────────────────────────────────────────────────────
