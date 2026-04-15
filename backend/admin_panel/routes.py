@@ -11,18 +11,31 @@ templates = Jinja2Templates(
 )
 
 
-# ─── Dashboard ───────────────────────────────────────────────────────────────
+# ─── SAFE HELPERS ─────────────────────────────────────────
+
+def safe_users():
+    return [u for u in USERS_DB.values() if isinstance(u, dict)]
+
+
+def safe_logs():
+    return [log for log in AUDIT_LOG if isinstance(log, dict)]
+
+
+# ─── Dashboard ────────────────────────────────────────────
 
 @router.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
     try:
-        users = USERS_DB if USERS_DB else {}
+        users = safe_users()
+        logs = safe_logs()
 
         stats = {
             "total_users": len(users),
-            "active_users": sum(1 for u in users.values() if u.get("status") == "active"),
-            "inactive_users": sum(1 for u in users.values() if u.get("status") == "inactive"),
-            "recent_actions": AUDIT_LOG[-5:][::-1] if AUDIT_LOG else [],
+            "active_users": sum(1 for u in users if u.get("status") == "active"),
+            "inactive_users": sum(1 for u in users if u.get("status") == "inactive"),
+
+            # ✅ FIXED HERE
+            "recent_actions": logs[-5:][::-1],
         }
 
         return templates.TemplateResponse(
@@ -34,12 +47,12 @@ async def dashboard(request: Request):
         return HTMLResponse(f"Dashboard Error: {str(e)}")
 
 
-# ─── Users List ──────────────────────────────────────────────────────────────
+# ─── Users List ───────────────────────────────────────────
 
 @router.get("/users", response_class=HTMLResponse)
 async def list_users(request: Request, search: str = ""):
     try:
-        users = list(USERS_DB.values()) if USERS_DB else []
+        users = safe_users()
 
         if search:
             users = [
@@ -57,7 +70,7 @@ async def list_users(request: Request, search: str = ""):
         return HTMLResponse(f"Error: {str(e)}")
 
 
-# ─── Create User ─────────────────────────────────────────────────────────────
+# ─── Create User ──────────────────────────────────────────
 
 @router.get("/users/create", response_class=HTMLResponse)
 async def create_user_form(request: Request):
@@ -87,7 +100,8 @@ async def create_user(
             },
         )
 
-    new_id = max((u["id"] for u in USERS_DB.values()), default=0) + 1
+    new_id = max((u["id"] for u in safe_users()), default=0) + 1
+
     USERS_DB[email] = {
         "id": new_id,
         "name": name,
@@ -99,7 +113,9 @@ async def create_user(
         "licenses": [],
         "created_at": __import__("datetime").date.today().isoformat(),
     }
+
     log_action("CREATE_USER", f"Created user {name} ({email}), Role: {role}")
+
     return templates.TemplateResponse(
         "create_user.html",
         {
@@ -111,7 +127,7 @@ async def create_user(
     )
 
 
-# ─── Reset Password ───────────────────────────────────────────────────────────
+# ─── Reset Password ───────────────────────────────────────
 
 @router.get("/users/reset-password", response_class=HTMLResponse)
 async def reset_password_form(request: Request, email: str = ""):
@@ -140,6 +156,7 @@ async def reset_password(
                 "message_type": "error",
             },
         )
+
     if new_password != confirm_password:
         return templates.TemplateResponse(
             "reset_password.html",
@@ -151,33 +168,23 @@ async def reset_password(
                 "message_type": "error",
             },
         )
-    if len(new_password) < 6:
-        return templates.TemplateResponse(
-            "reset_password.html",
-            {
-                "request": request,
-                "user": USERS_DB[email],
-                "prefill_email": email,
-                "message": "❌ Password must be at least 6 characters.",
-                "message_type": "error",
-            },
-        )
 
     USERS_DB[email]["password"] = new_password
     log_action("RESET_PASSWORD", f"Password reset for {email}")
+
     return templates.TemplateResponse(
         "reset_password.html",
         {
             "request": request,
             "user": USERS_DB[email],
             "prefill_email": email,
-            "message": f"✅ Password for {email} has been reset successfully!",
+            "message": f"✅ Password reset successful!",
             "message_type": "success",
         },
     )
 
 
-# ─── Assign / Revoke License ─────────────────────────────────────────────────
+# ─── Licenses ─────────────────────────────────────────────
 
 @router.get("/users/licenses", response_class=HTMLResponse)
 async def licenses_form(request: Request, email: str = ""):
@@ -199,7 +206,7 @@ async def assign_license(
     request: Request,
     email: str = Form(...),
     license_name: str = Form(...),
-    action: str = Form(...),  # "assign" or "revoke"
+    action: str = Form(...),
 ):
     if email not in USERS_DB:
         return templates.TemplateResponse(
@@ -215,88 +222,62 @@ async def assign_license(
         )
 
     user = USERS_DB[email]
+
     if action == "assign":
-        if license_name in user["licenses"]:
-            msg = f"⚠️ {license_name} is already assigned to {email}."
-            msg_type = "warning"
-        else:
-            user["licenses"].append(license_name)
-            log_action("ASSIGN_LICENSE", f"Assigned {license_name} to {email}")
-            msg = f"✅ {license_name} assigned to {email} successfully!"
-            msg_type = "success"
-    else:
         if license_name not in user["licenses"]:
-            msg = f"⚠️ {license_name} was not assigned to {email}."
-            msg_type = "warning"
-        else:
+            user["licenses"].append(license_name)
+            log_action("ASSIGN_LICENSE", f"{license_name} → {email}")
+    else:
+        if license_name in user["licenses"]:
             user["licenses"].remove(license_name)
-            log_action("REVOKE_LICENSE", f"Revoked {license_name} from {email}")
-            msg = f"✅ {license_name} revoked from {email} successfully!"
-            msg_type = "success"
+            log_action("REVOKE_LICENSE", f"{license_name} → {email}")
 
     return templates.TemplateResponse(
         "licenses.html",
         {
             "request": request,
-            "user": USERS_DB[email],
-            "prefill_email": email,
-            "all_licenses": AVAILABLE_LICENSES,
-            "message": msg,
-            "message_type": msg_type,
-        },
-    )
-
-
-# ─── Toggle User Status ───────────────────────────────────────────────────────
-
-@router.get("/users/toggle-status", response_class=HTMLResponse)
-async def toggle_status_form(request: Request, email: str = ""):
-    user = USERS_DB.get(email)
-    return templates.TemplateResponse(
-        "toggle_status.html",
-        {"request": request, "user": user, "prefill_email": email, "message": None}
-    )
-
-
-@router.post("/users/toggle-status", response_class=HTMLResponse)
-async def toggle_status(
-    request: Request,
-    email: str = Form(...),
-    action: str = Form(...),  # "activate" or "deactivate"
-):
-    if email not in USERS_DB:
-        return templates.TemplateResponse(
-            "toggle_status.html",
-            {
-                "request": request,
-                "user": None,
-                "prefill_email": email,
-                "message": f"❌ User {email} not found.",
-                "message_type": "error",
-            },
-        )
-
-    user = USERS_DB[email]
-    new_status = "active" if action == "activate" else "inactive"
-    user["status"] = new_status
-    log_action("TOGGLE_STATUS", f"User {email} set to {new_status}")
-    return templates.TemplateResponse(
-        "toggle_status.html",
-        {
-            "request": request,
             "user": user,
             "prefill_email": email,
-            "message": f"✅ User {email} is now {new_status}.",
+            "all_licenses": AVAILABLE_LICENSES,
+            "message": "✅ Updated successfully",
             "message_type": "success",
         },
     )
 
 
-# ─── Audit Log ────────────────────────────────────────────────────────────────
+# ─── Toggle Status ───────────────────────────────────────
+
+@router.post("/users/toggle-status", response_class=HTMLResponse)
+async def toggle_status(
+    request: Request,
+    email: str = Form(...),
+    action: str = Form(...),
+):
+    if email not in USERS_DB:
+        return HTMLResponse("User not found")
+
+    USERS_DB[email]["status"] = "active" if action == "activate" else "inactive"
+    log_action("TOGGLE_STATUS", f"{email} → {action}")
+
+    return templates.TemplateResponse(
+        "toggle_status.html",
+        {
+            "request": request,
+            "user": USERS_DB[email],
+            "prefill_email": email,
+            "message": "✅ Status updated",
+            "message_type": "success",
+        },
+    )
+
+
+# ─── Audit Log ───────────────────────────────────────────
 
 @router.get("/audit-log", response_class=HTMLResponse)
 async def audit_log(request: Request):
+    logs = safe_logs()[::-1]
+
     return templates.TemplateResponse(
         "audit_log.html",
-        {"request": request, "logs": AUDIT_LOG[::-1]}
+        {"request": request, "logs": logs}
     )
