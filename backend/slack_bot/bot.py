@@ -57,7 +57,7 @@ async def handle_mention(event, say, client):
 
         task = build_conditional_task(task)
 
-        result = await run_agent(task, headless=True)
+        result = await run_agent(task, headless=False)
 
         if result.get("success"):
             await say(f"✅ Done ({result.get('steps', 0)} steps)\n\n{result.get('result')}")
@@ -91,7 +91,7 @@ async def handle_dm(message, say):
 
         task = build_conditional_task(task)
 
-        result = await run_agent(task, headless=True)
+        result = await run_agent(task, headless=False)
 
         if result.get("success"):
             await say(f"✅ Done ({result.get('steps', 0)} steps)\n\n{result.get('result')}")

@@ -8,7 +8,7 @@ import os
 import re
 
 from langchain_openai import ChatOpenAI
-from browser_use import Agent, Browser   # ✅ FIXED (removed BrowserConfig)
+from browser_use import Agent, Browser, BrowserConfig   # ✅ FIXED (removed BrowserConfig)
 
 
 ADMIN_PANEL_URL = os.getenv("ADMIN_PANEL_URL", "http://localhost:8000")
@@ -54,7 +54,11 @@ async def run_agent(task: str, headless: bool = True) -> dict:
     llm.model_kwargs.pop("response_format", None)
 
     # ✅ FIXED browser (NO BrowserConfig)
-    browser = Browser(headless=headless)
+    browser = Browser(
+    config=BrowserConfig(
+        headless=headless
+    )
+)
 
     clean_task = f"{build_system_prompt()}\n\nTask: {task}"
 
